@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2024 Ismail Elkhrachy, Ahmed M. El-Sayed, Mohamed K. Hassan, Youssef A. Ibrahim, Nadia S. El-Din
+Copyright (c) 2024 Ismail Elkhrachy
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
