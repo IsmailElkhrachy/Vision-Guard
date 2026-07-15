@@ -1,75 +1,66 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Space GeoVision - Main Application Entry Point
+ADAS System Application - Main Entry Point
 """
-import logging
+
 import sys
+import logging
 import os
-import time
+import pickle                # <-- added pickle
+from PyQt5.QtWidgets import QApplication
+from adas_system import ADASSystem
+from gui import ADASApp
 
-# Configure matplotlib logging
-logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('adas_system.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
-from PyQt5.QtWidgets import QApplication, QSplashScreen
-from PyQt5.QtGui import QPixmap, QImage
-from PyQt5.QtCore import Qt, QTimer  # <-- أضف QTimer هنا
-
-from ui import SatelliteImageApp
+logger = logging.getLogger(__name__)
 
 def main():
-    """Main application entry point"""
-    app = QApplication(sys.argv)
-    
-    # 1. التحقق من وجود الملف
-    image_path = r"D:\Python_Codes\icons\Pr_icon.jpeg"
-    if not os.path.exists(image_path):
-        print(f"Error: File not found at {image_path}")
-        sys.exit(1)
-    
-    # 2. تحميل الصورة بطريقة صحيحة
     try:
-        image = QImage(image_path)
-        if image.isNull():
-            raise ValueError("Failed to load image")
-            
-        pixmap = QPixmap.fromImage(image)
-        
-        if pixmap.width() == 0 or pixmap.height() == 0:
-            raise ValueError("Invalid image dimensions")
-            
-    except Exception as e:
-        print(f"Image loading error: {str(e)}")
-        sys.exit(1)
-    
-    # 3. تغيير طريقة التحجيم
-    splash_pix = pixmap.scaled(
-        800, 
-        1000, 
-        Qt.AspectRatioMode.KeepAspectRatio,
-        Qt.TransformationMode.SmoothTransformation
-    )
-    
-    # 4. إعدادات الشاشة
-    splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint)
-    splash.setWindowFlags(
-        Qt.WindowType.FramelessWindowHint | 
-        Qt.WindowType.WindowStaysOnTopHint
-    )
-    splash.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-    
-    splash.show()
-    app.processEvents()
-    
-    # 5. استخدام QTimer بشكل صحيح
-    timer = QTimer()
-    timer.singleShot(9000, lambda: None)  # 2000 ميلي ثانية = 2 ثانية
-    
-    window = SatelliteImageApp()
-    splash.finish(window)
-    window.show()
-    
-    sys.exit(app.exec_())
+        logger.info("Starting ADAS System")
 
-if __name__ == '__main__':
+        # Initialize ADAS system with config
+        adas_system = ADASSystem("config.json")
+
+        # Try to load a previously saved calibration (e.g., from a fixed path)
+        calib_path = "calibration.pkl"
+        if os.path.exists(calib_path):
+            try:
+                with open(calib_path, 'rb') as f:
+                    calib_data = pickle.load(f)
+                    adas_system.load_calibration_data(calib_data)
+                    logger.info("Loaded calibration from file")
+            except Exception as e:
+                logger.error(f"Failed to load calibration: {e}")
+        else:
+            logger.info("No calibration file found. Using defaults or manual calibration later.")
+
+        # Audio test
+        # audio_status = adas_system.get_audio_status()
+        # print(f"Audio enabled: {audio_status['enabled']}")
+        # print(f"Audio initialized: {audio_status['initialized']}")
+        # print(f"Number of sounds loaded: {audio_status['sounds_loaded']}")
+
+        # if audio_status['initialized']:
+        #     adas_system.test_audio_system()
+        # else:
+        #     print("WARNING: Audio system not initialized.")
+
+        app = QApplication(sys.argv)
+        app.setStyle('Fusion')
+        window = ADASApp(adas_system)
+        window.show()
+        sys.exit(app.exec_())
+    except Exception as e:
+        logger.error(f"Error starting ADAS system: {e}")
+        raise
+
+if __name__ == "__main__":
     main()
