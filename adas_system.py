@@ -140,7 +140,7 @@ class ADASSystem:
 
         # Camera geometry (from config, can be updated by calibration or GUI)
         cam_cfg = self.config.get('camera', {})
-        self.camera_height = cam_cfg.get('camera_height', 1.5)      # meters
+        self.camera_height = cam_cfg.get('camera_height', 1.75)      # meters
         self.camera_pitch = np.radians(cam_cfg.get('camera_pitch', 0.0))   # radians
         self.focal_length_px = cam_cfg.get('focal_length', 1000)   # pixels (fallback)
         self.principal_point = (cam_cfg.get('cx', 640), cam_cfg.get('cy', 360))
@@ -148,6 +148,13 @@ class ADASSystem:
         # Kalman trackers for lanes
         self.left_kalman = KalmanLaneTracker()
         self.right_kalman = KalmanLaneTracker()
+
+        # Consecutive-miss counters: after MAX_LANE_MISSES frames with no
+        # real Hough measurement, a lane is reported as "not detected"
+        # instead of trusting an unconfirmed Kalman prediction indefinitely.
+        self.left_miss_count = 0
+        self.right_miss_count = 0
+        self.MAX_LANE_MISSES = 5
 
         # YOLOv8
         self.model = None
@@ -490,6 +497,7 @@ class ADASSystem:
     # ----------------------------------------------------------------------
     # Metric Distance Estimation using Camera Geometry
     # ----------------------------------------------------------------------
+
     def compute_metric_distance(self, bottom_y: int, height: int, object_real_height: float, img_h: int) -> float:
         """
         Compute metric distance to an object using calibrated camera geometry.
@@ -497,11 +505,18 @@ class ADASSystem:
         Args:
             bottom_y: y-coordinate of the object's bottom edge (touching ground).
             height: Height of the bounding box in pixels.
-            object_real_height: Real-world height of the object in meters (e.g., 1.7 for person).
-            img_h: Height of the current image frame (used for scaling calibration).
+            object_real_height: Real-world height of the object in meters.
+            img_h: Height of the current image frame.
 
         Returns:
             Distance in meters (clamped between 0.5 and 150.0 m).
+
+        Optimized parameters (from grid search, 700/300 KITTI split):
+            w1 (near-range ground-plane weight) = 0.5
+            w3 (far-range ground-plane weight)  = 0.2
+            distance threshold                 = 40 m
+            camera height                      = 1.75 m
+            horizon fraction (default)         = 0.485
         """
         # --- Fallback if no calibration ---
         if not self.calibration_loaded or self.mtx is None:
@@ -523,33 +538,35 @@ class ADASSystem:
             if abs(self.camera_pitch) > 0.01:
                 v0 = cy_scaled - f_scaled * np.tan(self.camera_pitch)
             else:
-                v0 = img_h * 0.6
+                # OPTIMIZED: horizon fraction changed from 0.6 to 0.485
+                v0 = img_h * 0.485
         v0 = max(int(img_h * 0.1), min(int(v0), int(img_h * 0.8)))
 
-        # --- Geometry‑based distance (ground plane) ---
+        # --- Geometry-based distance (ground plane) ---
         if bottom_y > v0:
             distance_geo = (self.camera_height * f_scaled) / (bottom_y - v0)
         else:
             distance_geo = None
 
-        # --- Height‑based distance (fallback) ---
+        # --- Height-based distance (fallback) ---
         if height > 0:
             distance_height = (object_real_height * f_scaled) / height
         else:
             distance_height = 50.0
 
-        # --- Combine ---
+        # --- Combine (OPTIMIZED weights) ---
         if distance_geo is not None:
-            if distance_geo < 30:
-                distance = 0.7 * distance_geo + 0.3 * distance_height
+            if distance_geo < 40:
+                # OPTIMIZED: w1 changed from 0.7 to 0.5
+                distance = 0.5 * distance_geo + 0.5 * distance_height
             else:
-                distance = 0.4 * distance_geo + 0.6 * distance_height
+                # OPTIMIZED: w3 changed from 0.4 to 0.2
+                distance = 0.2 * distance_geo + 0.8 * distance_height
         else:
             distance = distance_height
 
         distance = max(0.5, min(distance, 150.0))
         return round(distance, 1)
-
     # ----------------------------------------------------------------------
     # YOLO
     # ----------------------------------------------------------------------
@@ -669,7 +686,8 @@ class ADASSystem:
                             valid = region[(region > 0.5) & (region < 100)]
                             if valid.size > 0:
                                 depth_dist = np.median(valid)
-                                dist = 0.6 * dist + 0.4 * depth_dist
+                                #dist = 0.6 * dist + 0.4 * depth_dist
+                                dist = 0.9 * dist + 0.1 * depth_dist
                     det = DetectionResult(x,y,w,h,name,conf,dist)
                     self.results['object_counts'][name] += 1
                     if name in ['car','truck','bus','motorcycle']:
@@ -771,19 +789,29 @@ class ADASSystem:
                             right_meas = (slope, intercept)
             
             # --- Step 3: Update Kalman with measurements (if available) ---
+            # A prediction with no real measurement is only trusted for a
+            # short run of frames (MAX_LANE_MISSES). Beyond that, the lane
+            # is reported as not detected rather than as a stale, unverified
+            # extrapolation reported with the same confidence as a real fix.
             if left_meas is not None:
                 left_filtered = self.left_kalman.update(left_meas)
+                self.left_miss_count = 0
             else:
-                left_filtered = left_pred   # use prediction only
-            
+                self.left_miss_count += 1
+                left_filtered = left_pred if self.left_miss_count <= self.MAX_LANE_MISSES else None
+
             if right_meas is not None:
                 right_filtered = self.right_kalman.update(right_meas)
+                self.right_miss_count = 0
             else:
-                right_filtered = right_pred
-            
+                self.right_miss_count += 1
+                right_filtered = right_pred if self.right_miss_count <= self.MAX_LANE_MISSES else None
+
             # --- Step 4: Convert filtered parameters back to line coordinates ---
-            left_line = self.params_to_line(left_filtered, image.shape[0], int(image.shape[0]*0.6))
-            right_line = self.params_to_line(right_filtered, image.shape[0], int(image.shape[0]*0.6))
+            left_line = (self.params_to_line(left_filtered, image.shape[0], int(image.shape[0]*0.6))
+                        if left_filtered is not None else None)
+            right_line = (self.params_to_line(right_filtered, image.shape[0], int(image.shape[0]*0.6))
+                         if right_filtered is not None else None)
             
             if left_line is not None and right_line is not None:
                 res.left_line = left_line
@@ -803,6 +831,8 @@ class ADASSystem:
         self.right_fit_history.clear()
         self.left_fit = None
         self.right_fit = None
+        self.left_miss_count = 0
+        self.right_miss_count = 0
 
     def update_lane_history(self, left: np.ndarray, right: np.ndarray):
         lp = self.line_to_params(left)
@@ -893,7 +923,10 @@ class ADASSystem:
             
             # Log detections for export (if active)
             self.log_detections(cars, pedestrians, traffic_signs, other_objects)
-            # Generate audio warnings based on lane status and object proximity
+            # Generate audio warnings based on lane status and object 
+            
+            # Reset warning state for this frame
+            self.last_warning_triggered = {'collision': False, 'lane_departure': False}
             self.generate_audio_warnings(lane_result, cars, pedestrians, traffic_signs)
 
             # Draw all annotations on the frame
