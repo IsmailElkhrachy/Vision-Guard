@@ -1,0 +1,4 @@
+Module / Component,Execution Latency (ms),Throughput (FPS)
+YOLOv8n Object Detector,40.21,24.9
+Classical Lane Pipeline,5.8,172.5
+Vision-Guard Integrated Pipeline,114.32,8.7

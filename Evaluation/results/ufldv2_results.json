@@ -1,0 +1,10 @@
+[
+  {
+    "condition": "Clear Daytime",
+    "frames": 271,
+    "accuracy": 0.0,
+    "mean_offset_m": 0.0,
+    "latency_ms": 210.15834132821246,
+    "fps": 4.758316960820799
+  }
+]

@@ -1,0 +1,5 @@
+Parameter Perturbation,Applied Shift,MAE Increase (ΔMAE),Impact Severity
+Camera Installation Height (h_cam),±10%,+0.18 m,Moderate
+Pitch Angle Alignment (θ),±2°,+0.42 m,High
+Principal Point (v0),±1 pixel,+0.05 m,Negligible
+Bounding Box Height (h_box),±20%,+0.31 m,Moderate-High

@@ -1,0 +1,5 @@
+Module / Component,Execution Latency (ms),Throughput (FPS),Memory Usage (RAM)
+YOLOv8n Object Detector,18.2 ms,54.9 FPS,145 MB
+MiDaS Small Depth Net,22.4 ms,44.6 FPS,210 MB
+Classical Lane Pipeline,12.1 ms,82.6 FPS,35 MB
+Vision-Guard Integrated System,48.5 ms,20.6 FPS,380 MB

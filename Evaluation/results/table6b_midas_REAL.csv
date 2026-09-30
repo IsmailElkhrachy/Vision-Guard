@@ -1,0 +1,3 @@
+Estimation Mode,MAE (m),RMSE (m)
+Geometric Only,2.615,3.766
+Hybrid (Geo + MiDaS),7.36,9.197

@@ -1,0 +1,7 @@
+Environmental Condition,Frames,Lane Detected Rate (%),Accuracy (%),Mean Offset Error (m),Latency (ms),FPS
+Clear Daytime,271,100.0,94.5,0.018,19.41,51.5
+Curved Roads,400,100.0,44.0,4.257,20.69,48.3
+Nighttime,375,100.0,0.0,3.169,4.16,240.6
+Direct Sun Glare,400,100.0,0.2,2.243,24.37,41.0
+Rainy Conditions,400,100.0,2.8,4.091,6.1,164.0
+Fog / Low Visibility,400,100.0,3.0,3.637,47.13,21.2

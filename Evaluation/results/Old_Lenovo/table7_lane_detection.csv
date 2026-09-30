@@ -1,0 +1,8 @@
+Environmental Condition,Vision-Guard Accuracy (%),Vision-Guard Offset Error (m),UFLDv2 Accuracy (%),UFLDv2 Offset Error (m)
+Clear Daytime,96.5%,0.03 m,97.2%,0.02 m
+Curved Roads,86.0%,0.06 m,91.5%,0.04 m
+Nighttime,81.2%,0.07 m,88.0%,0.05 m
+Rain / Glare,75.0%,0.09 m,84.0%,0.06 m
+Worn Markings,73.0%,0.10 m,82.5%,0.07 m
+Overall Average,82.3%,0.07 m,88.6%,0.05 m
+Execution Latency (FPS),31.3 ms (31.9 FPS),—,42.6 ms (23.5 FPS),—

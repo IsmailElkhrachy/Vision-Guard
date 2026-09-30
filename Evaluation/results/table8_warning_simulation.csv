@@ -1,0 +1,4 @@
+Hazard Module,TP,FP,FN,TN,Precision (%),Recall (%)
+Forward Collision Warning (FCW),8713,12,142,51133,99.9,98.4
+Lane Departure Warning (LDW),27899,17,185,31899,99.9,99.3
+Combined Multi-Hazard System,31935,23,252,27790,99.9,99.2

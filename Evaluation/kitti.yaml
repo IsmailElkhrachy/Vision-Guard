@@ -1,0 +1,15 @@
+# evaluation/kitti.yaml
+path: D:/ADAS/Datasets/KITTI # Direct path to your KITTI dataset root
+train: image_2
+val: image_2
+test: image_2
+
+names:
+  0: Car
+  1: Van
+  2: Truck
+  3: Pedestrian
+  4: Person_sitting
+  5: Cyclist
+  6: Tram
+  7: Misc

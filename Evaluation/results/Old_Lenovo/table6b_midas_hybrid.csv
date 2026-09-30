@@ -1,0 +1,3 @@
+Estimation Mode,Range Span,MAE (m),RMSE (m),CPU Latency Overhead
+Geometric Only (Vision-Guard),1–50 m,0.75 m,1.02 m,0.0 ms (Real-time)
+Hybrid Geometric + MiDaS,1–50 m,0.58 m,0.79 m,+142.5 ms (~7 FPS)

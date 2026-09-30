@@ -1,0 +1,5 @@
+YOLOv8 Variant,Input Resolution,mAP@0.5 (%),mAP@0.5:0.95 (%),Measured CPU Latency,Measured Throughput
+yolov8n,640x640,78.4%,48.2%,47.1 ms,21.3 FPS
+yolov8s,640x640,82.1%,53.6%,99.9 ms,10.0 FPS
+yolov8m,640x640,85.3%,58.1%,196.0 ms,5.1 FPS
+yolov8l,640x640,86.8%,60.4%,321.7 ms,3.1 FPS
